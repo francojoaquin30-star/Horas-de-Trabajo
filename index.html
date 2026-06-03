@@ -1,61 +1,197 @@
+```html
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Horas</title>
+    <!-- Tailwind CSS para diseño minimalista premium -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        /* Ocultar flechas nativas de inputs de tiempo en algunos navegadores para mayor limpieza */
-        input[type="time"]::-webkit-calendar-picker-indicator {
-            filter: invert(0.5);
+        /* Deshabilitar selección de texto para que se sienta más como una app nativa */
+        body {
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* Ocultar scrollbar pero permitir desplazamiento */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen pb-12">
+<body class="bg-slate-50 text-slate-800 font-sans antialiased min-h-screen relative overflow-x-hidden">
 
-    <div class="max-w-md mx-auto px-4 pt-6">
+    <!-- ========================================== -->
+    <!--  PANTALLA DE PRESENTACIÓN (SPLASH SCREEN)  -->
+    <!-- ========================================== -->
+    <div id="splash-screen" class="fixed inset-0 bg-white z-50 flex flex-col justify-between items-center py-16 px-6 transition-all duration-700 ease-in-out opacity-100">
+        <!-- Espacio superior vacío para centrado óptico -->
+        <div></div>
+
+        <!-- Logotipo Animado y Título -->
+        <div class="flex flex-col items-center">
+            <!-- Icono Minimalista de Reloj en SVG -->
+            <div class="w-24 h-24 bg-slate-900 rounded-[2rem] flex items-center justify-center shadow-xl shadow-slate-200 mb-6 animate-pulse">
+                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </div>
+            <h1 class="text-3xl font-bold tracking-tight text-slate-900">Mis Horas</h1>
+            <p class="text-sm text-slate-400 mt-2 font-medium tracking-wide">Tu tiempo bajo control</p>
+        </div>
+
+        <!-- Indicador de Carga Minimalista -->
+        <div class="flex flex-col items-center w-full max-w-xs">
+            <div class="w-12 h-1 bg-slate-100 rounded-full overflow-hidden mb-4">
+                <div class="h-full bg-slate-900 rounded-full w-1/2 animate-[loading_1.5s_ease-in-out_infinite]"></div>
+            </div>
+            <span class="text-[11px] text-slate-400 uppercase tracking-widest font-bold">Iniciando</span>
+        </div>
+    </div>
+
+    <style>
+        /* Animación personalizada para la barra de carga del Splash */
+        @keyframes loading {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+    </style>
+
+
+    <!-- ========================================== -->
+    <!--          CONTENIDO PRINCIPAL APP           -->
+    <!-- ========================================== -->
+    <div class="max-w-md mx-auto px-4 pt-6 pb-24">
         
-        <header class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
-            <div class="flex justify-between items-center mb-4">
-                <h1 class="text-xl font-semibold tracking-tight text-gray-900">Control de Horas</h1>
-                <input type="month" id="monthPicker" class="text-sm bg-gray-100 border-none rounded-lg p-2 font-medium text-gray-700 focus:ring-2 focus:ring-gray-200 outline-none">
+        <!-- ENCABEZADO / BALANCE MENSUAL -->
+        <header class="bg-white rounded-3xl p-6 shadow-sm border border-slate-100/80 mb-6 relative overflow-hidden">
+            <!-- Fondo sutil de diseño decorativo -->
+            <div class="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
+
+            <div class="flex justify-between items-center mb-6 relative z-10">
+                <div class="flex flex-col">
+                    <span class="text-xs uppercase tracking-wider text-slate-400 font-bold">Control Diario</span>
+                    <input type="month" id="monthPicker" class="text-lg font-semibold bg-transparent border-none p-0 text-slate-800 focus:ring-0 outline-none cursor-pointer">
+                </div>
+                
+                <!-- Botón de Ajustes -->
+                <button id="btnSettings" class="w-10 h-10 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
+                    <i class="fa-solid fa-gear"></i>
+                </button>
             </div>
             
-            <p class="text-xs uppercase tracking-wider text-gray-400 font-medium mb-1">Balance del Mes</p>
-            <div id="totalBalance" class="text-4xl font-bold tracking-tight text-gray-900 transition-all">
-                0h 0m
+            <div class="text-center py-4 relative z-10">
+                <p class="text-[11px] uppercase tracking-widest text-slate-400 font-extrabold mb-1">Balance Mensual</p>
+                <div id="totalBalance" class="text-5xl font-extrabold tracking-tight text-slate-900 transition-all duration-300">
+                    0h 0m
+                </div>
             </div>
         </header>
 
-        <main class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-4 border-b border-gray-50 bg-gray-50/50 flex justify-between text-xs font-semibold uppercase tracking-wider text-gray-400">
-                <span>Día</span>
+        <!-- LISTADO DE DÍAS -->
+        <main class="bg-white rounded-3xl shadow-sm border border-slate-100/80 overflow-hidden">
+            <!-- Encabezado de columnas -->
+            <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between text-[11px] font-bold uppercase tracking-widest text-slate-400">
+                <span>Fecha</span>
                 <div class="flex gap-12 mr-6">
                     <span>Entrada</span>
                     <span>Salida</span>
                     <span class="w-12 text-right">Bal.</span>
                 </div>
             </div>
-            <div id="daysContainer" class="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
-                </div>
+
+            <!-- Contenedor dinámico de los días -->
+            <div id="daysContainer" class="divide-y divide-slate-100 max-h-[55vh] overflow-y-auto no-scrollbar">
+                <!-- Se rellena con JavaScript -->
+            </div>
         </main>
     </div>
 
+
+    <!-- ========================================== -->
+    <!--         MODAL DE CONFIGURACIÓN             -->
+    <!-- ========================================== -->
+    <div id="settingsModal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-sm z-40 hidden flex items-end justify-center transition-opacity duration-300">
+        <div class="bg-white w-full max-w-md rounded-t-[2.5rem] p-8 shadow-2xl transform translate-y-full transition-transform duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-slate-900">Ajustes de Jornada</h3>
+                <button id="btnCloseSettings" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <p class="text-sm text-slate-500 mb-6">Define cuántas horas por día exige tu contrato laboral. El cálculo del balance mensual se actualizará automáticamente en base a esto.</p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Horas Contractuales Diarias</label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" id="inputContractHours" min="1" max="24" step="0.5" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-base font-semibold focus:bg-white focus:border-slate-400 focus:ring-2 focus:ring-slate-100 outline-none transition-all">
+                        <span class="font-bold text-slate-600 text-sm">Horas</span>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnSaveSettings" class="w-full bg-slate-950 text-white font-semibold rounded-2xl py-4 mt-8 hover:bg-slate-900 transition-colors">
+                Guardar Cambios
+            </button>
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!--               LÓGICA JAVASCRIPT            -->
+    <!-- ========================================== -->
     <script>
-        const CONTRACT_HOURS = 9; // 8:00 a 17:00 son 9 horas
+        // Variables de configuración de jornada
+        let CONTRACT_HOURS = 9; // Valor por defecto
+        
+        const splashScreen = document.getElementById('splash-screen');
         const monthPicker = document.getElementById('monthPicker');
         const daysContainer = document.getElementById('daysContainer');
         const totalBalanceEl = document.getElementById('totalBalance');
 
-        // Inicializar con el mes actual
+        // Referencias del Modal de Ajustes
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsContent = settingsModal.querySelector('div');
+        const btnSettings = document.getElementById('btnSettings');
+        const btnCloseSettings = document.getElementById('btnCloseSettings');
+        const btnSaveSettings = document.getElementById('btnSaveSettings');
+        const inputContractHours = document.getElementById('inputContractHours');
+
+        // 1. CONTROL DE LA PANTALLA DE PRESENTACIÓN (SPLASH)
+        window.addEventListener('DOMContentLoaded', () => {
+            // Cargar jornada contractual guardada o usar la de defecto
+            const savedContractHours = localStorage.getItem('user-contract-hours');
+            if (savedContractHours) {
+                CONTRACT_HOURS = parseFloat(savedContractHours);
+            }
+            inputContractHours.value = CONTRACT_HOURS;
+
+            // Retrasar el desvanecimiento para simular carga nativa
+            setTimeout(() => {
+                splashScreen.classList.add('opacity-0', 'pointer-events-none');
+                // Removerlo completamente del DOM tras la animación para optimizar rendimiento
+                setTimeout(() => splashScreen.remove(), 700);
+            }, 1800); 
+        });
+
+        // 2. INICIALIZAR FECHAS
         const now = new Date();
         const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         monthPicker.value = currentYearMonth;
 
-        // Cargar datos al cambiar de mes
         monthPicker.addEventListener('change', renderMonth);
 
+        // 3. RENDERIZAR LA GRILLA DEL MES SELECCIONADO
         function renderMonth() {
             const [year, month] = monthPicker.value.split('-').map(Number);
             const daysInMonth = new Date(year, month, 0).getDate();
@@ -66,39 +202,45 @@
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayData = savedData[day] || { entrada: '', salida: '' };
-                
-                // Formatear fecha para saber si es finde
                 const dateObj = new Date(year, month - 1, day);
                 const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
                 const dayName = dateObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase().replace('.', '');
 
                 const row = document.createElement('div');
-                row.className = `flex justify-between items-center p-4 transition-colors ${isWeekend ? 'bg-gray-50/40 text-gray-400' : 'hover:bg-gray-50'}`;
+                row.className = `flex justify-between items-center p-4 transition-all duration-200 ${isWeekend ? 'bg-slate-50/40 text-slate-400' : 'hover:bg-slate-50/70'}`;
                 
                 row.innerHTML = `
                     <div class="flex flex-col">
-                        <span class="font-semibold text-sm ${isWeekend ? 'text-gray-400' : 'text-gray-700'}">${day}</span>
-                        <span class="text-[10px] font-medium opacity-60">${dayName}</span>
+                        <span class="font-bold text-sm ${isWeekend ? 'text-slate-400' : 'text-slate-800'}">${day}</span>
+                        <span class="text-[10px] font-bold tracking-wider opacity-50">${dayName}</span>
                     </div>
                     <div class="flex items-center gap-4">
-                        <input type="time" value="${dayData.entrada}" data-day="${day}" data-type="entrada" 
-                            class="bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-gray-200 outline-none transition-all">
-                        <input type="time" value="${dayData.salida}" data-day="${day}" data-type="salida" 
-                            class="bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-gray-200 outline-none transition-all">
-                        <span id="bal-${day}" class="w-12 text-right text-xs font-bold text-gray-400">--</span>
+                        <!-- Selector de Entrada -->
+                        <div class="relative">
+                            <input type="time" value="${dayData.entrada}" data-day="${day}" data-type="entrada" 
+                                class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-700 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100 outline-none transition-all">
+                        </div>
+                        <!-- Selector de Salida -->
+                        <div class="relative">
+                            <input type="time" value="${dayData.salida}" data-day="${day}" data-type="salida" 
+                                class="bg-slate-50 border border-slate-200 rounded-xl p-2.5 text-sm font-semibold text-slate-700 focus:bg-white focus:border-slate-300 focus:ring-4 focus:ring-slate-100 outline-none transition-all">
+                        </div>
+                        <!-- Indicador de balance diario -->
+                        <span id="bal-${day}" class="w-12 text-right text-xs font-bold text-slate-400">--</span>
                     </div>
                 `;
                 daysContainer.appendChild(row);
             }
 
-            // Escuchar cambios en los inputs
-            daysContainer.querySelectorAll('input').forEach(input => {
+            // Escuchar cambios de tiempos en cada input
+            daysContainer.querySelectorAll('input[type="time"]').forEach(input => {
                 input.addEventListener('change', (e) => saveAndCalculate(e, storageKey));
             });
 
             calculateTotal(savedData, daysInMonth);
         }
 
+        // 4. GUARDAR CAMBIOS DE HORA Y RECALCULAR
         function saveAndCalculate(e, storageKey) {
             const day = e.target.dataset.day;
             const type = e.target.dataset.type;
@@ -115,14 +257,17 @@
             calculateTotal(savedData, daysInMonth);
         }
 
+        // 5. CALCULAR BALANCES DIARIOS Y MENSUAL GENERAL
         function calculateTotal(data, daysInMonth) {
             let totalMinutesBalance = 0;
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const balEl = document.getElementById(`bal-${day}`);
                 if (!data[day] || !data[day].entrada || !data[day].salida) {
-                    if(balEl) balEl.textContent = '--';
-                    if(balEl) balEl.className = "w-12 text-right text-xs font-bold text-gray-400";
+                    if (balEl) {
+                        balEl.textContent = '--';
+                        balEl.className = "w-12 text-right text-xs font-bold text-slate-400";
+                    }
                     continue;
                 }
 
@@ -132,23 +277,22 @@
                 const entradaMins = eH * 60 + eM;
                 const salidaMins = sH * 60 + sM;
                 
-                // Tiempo trabajado en minutos
                 let workedMins = salidaMins - entradaMins;
-                if (workedMins < 0) workedMins += 24 * 60; // Por si pasa de medianoche
+                if (workedMins < 0) workedMins += 24 * 60; // Ajuste si cruza medianoche
 
-                // Balance del día contra las 9 horas contractuales (540 minutos)
+                // Balance diario contra la jornada pactada en minutos (CONTRACT_HOURS * 60)
                 const dayBalance = workedMins - (CONTRACT_HOURS * 60);
                 totalMinutesBalance += dayBalance;
 
-                // Mostrar balance individual del día
                 if (balEl) {
                     const sign = dayBalance >= 0 ? '+' : '';
                     balEl.textContent = `${sign}${formatMinutes(dayBalance)}`;
-                    balEl.className = `w-12 text-right text-xs font-bold ${dayBalance > 0 ? 'text-emerald-500' : dayBalance < 0 ? 'text-rose-500' : 'text-gray-400'}`;
+                    balEl.className = `w-12 text-right text-xs font-bold ${dayBalance > 0 ? 'text-emerald-500' : dayBalance < 0 ? 'text-rose-500' : 'text-slate-400'}`;
                 }
             }
 
-            // Renderizar el gran total arriba
+            // Renderizar balance final en la parte superior
+            const isNegative = totalMinutesBalance < 0;
             const sign = totalMinutesBalance >= 0 ? '+' : '-';
             const absMins = Math.abs(totalMinutesBalance);
             const hours = Math.floor(absMins / 60);
@@ -157,11 +301,11 @@
             totalBalanceEl.textContent = `${sign}${hours}h ${mins}m`;
             
             if (totalMinutesBalance > 0) {
-                totalBalanceEl.className = "text-4xl font-bold tracking-tight text-emerald-500";
+                totalBalanceEl.className = "text-5xl font-extrabold tracking-tight text-emerald-500";
             } else if (totalMinutesBalance < 0) {
-                totalBalanceEl.className = "text-4xl font-bold tracking-tight text-rose-500";
+                totalBalanceEl.className = "text-5xl font-extrabold tracking-tight text-rose-500";
             } else {
-                totalBalanceEl.className = "text-4xl font-bold tracking-tight text-gray-900";
+                totalBalanceEl.className = "text-5xl font-extrabold tracking-tight text-slate-900";
             }
         }
 
@@ -172,8 +316,48 @@
             return h > 0 ? `${h}h` : `${m}m`;
         }
 
-        // Carga inicial
+        // 6. GESTIÓN DEL MODAL DE AJUSTES
+        btnSettings.addEventListener('click', () => {
+            settingsModal.classList.remove('hidden');
+            setTimeout(() => {
+                settingsContent.classList.remove('translate-y-full');
+            }, 10);
+        });
+
+        function closeSettings() {
+            settingsContent.classList.add('translate-y-full');
+            setTimeout(() => {
+                settingsModal.classList.add('hidden');
+            }, 300);
+        }
+
+        btnCloseSettings.addEventListener('click', closeSettings);
+
+        // Guardar configuración de jornada contractual
+        btnSaveSettings.addEventListener('click', () => {
+            const val = parseFloat(inputContractHours.value);
+            if (val > 0 && val <= 24) {
+                CONTRACT_HOURS = val;
+                localStorage.setItem('user-contract-hours', val);
+                closeSettings();
+                // Forzar recalculado inmediato con el nuevo parámetro
+                renderMonth();
+            } else {
+                alert("Por favor, ingresa una cantidad de horas válida entre 1 y 24.");
+            }
+        });
+
+        // Cerrar modal al tocar fuera de su contenedor
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                closeSettings();
+            }
+        });
+
+        // Iniciar render inicial de la aplicación
         renderMonth();
     </script>
 </body>
 </html>
+
+```
