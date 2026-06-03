@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis Horas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Ocultar flechas nativas de inputs de tiempo en algunos navegadores para mayor limpieza */
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.5);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans antialiased min-h-screen pb-12">
+
+    <div class="max-w-md mx-auto px-4 pt-6">
+        
+        <header class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-6 text-center">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-xl font-semibold tracking-tight text-gray-900">Control de Horas</h1>
+                <input type="month" id="monthPicker" class="text-sm bg-gray-100 border-none rounded-lg p-2 font-medium text-gray-700 focus:ring-2 focus:ring-gray-200 outline-none">
+            </div>
+            
+            <p class="text-xs uppercase tracking-wider text-gray-400 font-medium mb-1">Balance del Mes</p>
+            <div id="totalBalance" class="text-4xl font-bold tracking-tight text-gray-900 transition-all">
+                0h 0m
+            </div>
+        </header>
+
+        <main class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="p-4 border-b border-gray-50 bg-gray-50/50 flex justify-between text-xs font-semibold uppercase tracking-wider text-gray-400">
+                <span>Día</span>
+                <div class="flex gap-12 mr-6">
+                    <span>Entrada</span>
+                    <span>Salida</span>
+                    <span class="w-12 text-right">Bal.</span>
+                </div>
+            </div>
+            <div id="daysContainer" class="divide-y divide-gray-100 max-h-[60vh] overflow-y-auto">
+                </div>
+        </main>
+    </div>
+
+    <script>
+        const CONTRACT_HOURS = 9; // 8:00 a 17:00 son 9 horas
+        const monthPicker = document.getElementById('monthPicker');
+        const daysContainer = document.getElementById('daysContainer');
+        const totalBalanceEl = document.getElementById('totalBalance');
+
+        // Inicializar con el mes actual
+        const now = new Date();
+        const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        monthPicker.value = currentYearMonth;
+
+        // Cargar datos al cambiar de mes
+        monthPicker.addEventListener('change', renderMonth);
+
+        function renderMonth() {
+            const [year, month] = monthPicker.value.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const storageKey = `horas-${year}-${month}`;
+            const savedData = JSON.parse(localStorage.getItem(storageKey)) || {};
+
+            daysContainer.innerHTML = '';
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayData = savedData[day] || { entrada: '', salida: '' };
+                
+                // Formatear fecha para saber si es finde
+                const dateObj = new Date(year, month - 1, day);
+                const isWeekend = dateObj.getDay() === 0 || dateObj.getDay() === 6;
+                const dayName = dateObj.toLocaleDateString('es-ES', { weekday: 'short' }).toUpperCase().replace('.', '');
+
+                const row = document.createElement('div');
+                row.className = `flex justify-between items-center p-4 transition-colors ${isWeekend ? 'bg-gray-50/40 text-gray-400' : 'hover:bg-gray-50'}`;
+                
+                row.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-semibold text-sm ${isWeekend ? 'text-gray-400' : 'text-gray-700'}">${day}</span>
+                        <span class="text-[10px] font-medium opacity-60">${dayName}</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <input type="time" value="${dayData.entrada}" data-day="${day}" data-type="entrada" 
+                            class="bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-gray-200 outline-none transition-all">
+                        <input type="time" value="${dayData.salida}" data-day="${day}" data-type="salida" 
+                            class="bg-gray-50 border border-gray-200 rounded-lg p-1.5 text-sm font-medium focus:bg-white focus:ring-2 focus:ring-gray-200 outline-none transition-all">
+                        <span id="bal-${day}" class="w-12 text-right text-xs font-bold text-gray-400">--</span>
+                    </div>
+                `;
+                daysContainer.appendChild(row);
+            }
+
+            // Escuchar cambios en los inputs
+            daysContainer.querySelectorAll('input').forEach(input => {
+                input.addEventListener('change', (e) => saveAndCalculate(e, storageKey));
+            });
+
+            calculateTotal(savedData, daysInMonth);
+        }
+
+        function saveAndCalculate(e, storageKey) {
+            const day = e.target.dataset.day;
+            const type = e.target.dataset.type;
+            const value = e.target.value;
+
+            const savedData = JSON.parse(localStorage.getItem(storageKey)) || {};
+            if (!savedData[day]) savedData[day] = { entrada: '', salida: '' };
+            
+            savedData[day][type] = value;
+            localStorage.setItem(storageKey, JSON.stringify(savedData));
+
+            const [year, month] = monthPicker.value.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            calculateTotal(savedData, daysInMonth);
+        }
+
+        function calculateTotal(data, daysInMonth) {
+            let totalMinutesBalance = 0;
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const balEl = document.getElementById(`bal-${day}`);
+                if (!data[day] || !data[day].entrada || !data[day].salida) {
+                    if(balEl) balEl.textContent = '--';
+                    if(balEl) balEl.className = "w-12 text-right text-xs font-bold text-gray-400";
+                    continue;
+                }
+
+                const [eH, eM] = data[day].entrada.split(':').map(Number);
+                const [sH, sM] = data[day].salida.split(':').map(Number);
+
+                const entradaMins = eH * 60 + eM;
+                const salidaMins = sH * 60 + sM;
+                
+                // Tiempo trabajado en minutos
+                let workedMins = salidaMins - entradaMins;
+                if (workedMins < 0) workedMins += 24 * 60; // Por si pasa de medianoche
+
+                // Balance del día contra las 9 horas contractuales (540 minutos)
+                const dayBalance = workedMins - (CONTRACT_HOURS * 60);
+                totalMinutesBalance += dayBalance;
+
+                // Mostrar balance individual del día
+                if (balEl) {
+                    const sign = dayBalance >= 0 ? '+' : '';
+                    balEl.textContent = `${sign}${formatMinutes(dayBalance)}`;
+                    balEl.className = `w-12 text-right text-xs font-bold ${dayBalance > 0 ? 'text-emerald-500' : dayBalance < 0 ? 'text-rose-500' : 'text-gray-400'}`;
+                }
+            }
+
+            // Renderizar el gran total arriba
+            const sign = totalMinutesBalance >= 0 ? '+' : '-';
+            const absMins = Math.abs(totalMinutesBalance);
+            const hours = Math.floor(absMins / 60);
+            const mins = absMins % 60;
+
+            totalBalanceEl.textContent = `${sign}${hours}h ${mins}m`;
+            
+            if (totalMinutesBalance > 0) {
+                totalBalanceEl.className = "text-4xl font-bold tracking-tight text-emerald-500";
+            } else if (totalMinutesBalance < 0) {
+                totalBalanceEl.className = "text-4xl font-bold tracking-tight text-rose-500";
+            } else {
+                totalBalanceEl.className = "text-4xl font-bold tracking-tight text-gray-900";
+            }
+        }
+
+        function formatMinutes(mins) {
+            const abs = Math.abs(mins);
+            const h = Math.floor(abs / 60);
+            const m = abs % 60;
+            return h > 0 ? `${h}h` : `${m}m`;
+        }
+
+        // Carga inicial
+        renderMonth();
+    </script>
+</body>
+</html>
